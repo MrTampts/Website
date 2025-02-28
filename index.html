@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akun Premium</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298, #ff6b6b, #ff4757);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+        }
+        .account {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .account.netflix {
+            border: 2px solid #e50914;
+        }
+        .account.youtube {
+            border: 2px solid #ff0000;
+        }
+        .account.spotify {
+            border: 2px solid #1db954;
+        }
+        .account.disney {
+            border: 2px solid #113ccf;
+        }
+        .account img {
+            width: 100px;
+            height: 100px;
+            border-radius: 10px;
+            margin-right: 20px;
+        }
+        .account .details {
+            flex-grow: 1;
+            text-align: left;
+        }
+        .account .details h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .account .details p {
+            margin: 5px 0;
+            font-size: 18px;
+        }
+        .account button {
+            background-color: #ffffff;
+            color: #000000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .account button:hover {
+            background-color: #f1f1f1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Akun Premium</h1>
+        
+        <!-- Netflix -->
+        <div class="account netflix">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg" alt="Netflix">
+            <div class="details">
+                <h2>Netflix</h2>
+                <p>Harga: Rp 25.000</p>
+            </div>
+            <button onclick="window.location.href='https://wa.me/6282248819196?text=Halo,%20saya%20ingin%20membeli%20akun%20Netflix%20seharga%20Rp%2025.000.'">Beli Sekarang</button>
+        </div>
+        
+        <!-- YouTube Premium -->
+        <div class="account youtube">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png" alt="YouTube Premium">
+            <div class="details">
+                <h2>YouTube Premium</h2>
+                <p>Harga: Rp 20.000</p>
+            </div>
+            <button onclick="window.location.href='https://wa.me/6282248819196?text=Halo,%20saya%20ingin%20membeli%20akun%20YouTube%20Premium%20seharga%20Rp%2020.000.'">Beli Sekarang</button>
+        </div>
+        
+        <!-- Spotify -->
+        <div class="account spotify">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg" alt="Spotify">
+            <div class="details">
+                <h2>Spotify</h2>
+                <p>Harga: Rp 30.000</p>
+            </div>
+            <button onclick="window.location.href='https://wa.me/6282248819196?text=Halo,%20saya%20ingin%20membeli%20akun%20Spotify%20seharga%20Rp%2030.000.'">Beli Sekarang</button>
+        </div>
+        
+        <!-- Disney+ Hotstar -->
+        <div class="account disney">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" alt="Disney+">
+            <div class="details">
+                <h2>Disney+ Hotstar</h2>
+                <p>Harga: Rp 35.000</p>
+            </div>
+            <button onclick="window.location.href='https://wa.me/6282248819196?text=Halo,%20saya%20ingin%20membeli%20akun%20Disney+%20Hotstar%20seharga%20Rp%2035.000.'">Beli Sekarang</button>
+        </div>
+    </div>
+</body>
+</html>
