@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Kasir Sederhana</title>
+    <title>Aplikasi Kasir Kios</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -34,6 +34,7 @@
         <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-6">Aplikasi Kasir Kios</h1>
         <p class="text-center text-gray-600 mb-8">Tambahkan barang dagangan dan hitung totalnya dengan mudah!</p>
         
+        <!-- Form untuk menambahkan barang baru -->
         <div class="mb-8 p-6 bg-gray-50 rounded-lg shadow-sm">
             <h2 class="text-xl font-semibold mb-4 text-gray-700">Tambah Barang Baru</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -49,20 +50,26 @@
             <button id="tambahBarangBtn" class="mt-4 w-full md:w-auto px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">Tambah ke Daftar Barang</button>
         </div>
 
+        <!-- Daftar Barang yang sudah diinput -->
         <div class="mb-8 p-6 bg-gray-50 rounded-lg shadow-sm">
             <h2 class="text-xl font-semibold mb-4 text-gray-700">Daftar Barang</h2>
             <div id="daftarBarangContainer" class="space-y-4">
-                </div>
+                <!-- Daftar barang permanen akan muncul di sini -->
+            </div>
             <div id="paginationControls" class="flex justify-center mt-4 space-x-2">
-                </div>
+                <!-- Tombol-tombol halaman akan muncul di sini -->
+            </div>
         </div>
 
+        <!-- Keranjang Belanja -->
         <div class="mb-8 p-6 bg-gray-50 rounded-lg shadow-sm">
             <h2 class="text-xl font-semibold mb-4 text-gray-700">Keranjang Belanja</h2>
             <div id="keranjangContainer" class="space-y-4">
-                </div>
+                <!-- Barang yang ditambahkan akan muncul di sini -->
+            </div>
         </div>
         
+        <!-- Total Harga dan Pembayaran -->
         <div class="p-6 bg-blue-100 rounded-lg shadow-inner mb-6">
             <h2 class="text-xl font-semibold text-blue-800 mb-4">Ringkasan Pembelian</h2>
             <div class="flex justify-between items-center mb-2">
@@ -85,10 +92,45 @@
         </div>
     </div>
     
+    <!-- Konten struk yang akan dicetak, disembunyikan secara default -->
     <div id="struk-content" class="hidden">
-        </div>
+        <!-- Konten akan dihasilkan di sini oleh JavaScript -->
+    </div>
 
-    <script>
+    <script type="module">
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Authenticate the user
+        let userId;
+        async function authenticate() {
+            try {
+                if (initialAuthToken) {
+                    const userCredential = await signInWithCustomToken(auth, initialAuthToken);
+                    userId = userCredential.user.uid;
+                } else {
+                    const userCredential = await signInAnonymously(auth);
+                    userId = userCredential.user.uid;
+                }
+                console.log("Authentication successful. User ID:", userId);
+                startApp();
+            } catch (error) {
+                console.error("Authentication failed:", error);
+            }
+        }
+        authenticate();
+
         // Menginisialisasi elemen-elemen DOM
         const namaBarangInput = document.getElementById('namaBarang');
         const hargaBarangInput = document.getElementById('hargaBarang');
@@ -107,19 +149,8 @@
         let daftarBarang = [];
         let currentPage = 1;
         const itemsPerPage = 10;
-
-        // Fungsi untuk memuat daftar barang dari localStorage
-        function muatDaftarBarang() {
-            const storedDaftar = localStorage.getItem('daftarBarang');
-            if (storedDaftar) {
-                daftarBarang = JSON.parse(storedDaftar);
-            }
-        }
-
-        // Fungsi untuk menyimpan daftar barang ke localStorage
-        function simpanDaftarBarang() {
-            localStorage.setItem('daftarBarang', JSON.stringify(daftarBarang));
-        }
+        
+        let daftarBarangUnsubscribe;
 
         // Fungsi untuk mengupdate tampilan daftar barang permanen dengan pagination
         function updateDaftarBarang() {
@@ -241,7 +272,7 @@
         }
 
         // Menambahkan event listener ke tombol "Tambah Barang Baru"
-        tambahBarangBtn.addEventListener('click', () => {
+        tambahBarangBtn.addEventListener('click', async () => {
             const nama = namaBarangInput.value.trim();
             const harga = parseInt(hargaBarangInput.value);
 
@@ -251,14 +282,18 @@
             }
 
             const existingItem = daftarBarang.find(item => item.nama.toLowerCase() === nama.toLowerCase());
-            if (existingItem) {
-                existingItem.harga = harga;
-            } else {
-                daftarBarang.push({ nama, harga });
+            
+            try {
+                if (existingItem) {
+                    const itemRef = doc(db, `artifacts/${appId}/users/${userId}/items`, existingItem.id);
+                    await updateDoc(itemRef, { harga: harga });
+                } else {
+                    const itemsCollection = collection(db, `artifacts/${appId}/users/${userId}/items`);
+                    await addDoc(itemsCollection, { nama, harga });
+                }
+            } catch (error) {
+                console.error("Error adding/updating document: ", error);
             }
-
-            simpanDaftarBarang();
-            updateDaftarBarang();
 
             namaBarangInput.value = '';
             hargaBarangInput.value = '';
@@ -275,7 +310,7 @@
         });
 
         // Menambahkan event listener untuk tombol di daftar barang
-        daftarBarangContainer.addEventListener('click', (event) => {
+        daftarBarangContainer.addEventListener('click', async (event) => {
             const targetBtn = event.target.closest('.tambah-keranjang-btn');
             const updateBtn = event.target.closest('.perbarui-harga-btn');
             const deleteBtn = event.target.closest('.hapus-daftar-btn');
@@ -288,24 +323,32 @@
             } else if (updateBtn) {
                 const index = updateBtn.dataset.index;
                 const globalIndex = (currentPage - 1) * itemsPerPage + parseInt(index);
+                const item = daftarBarang[globalIndex];
                 const inputHargaBaru = daftarBarangContainer.querySelector(`input[data-index="${index}"]`);
                 const newPrice = parseInt(inputHargaBaru.value);
                 
                 if (!isNaN(newPrice) && newPrice > 0) {
-                    daftarBarang[globalIndex].harga = newPrice;
-                    simpanDaftarBarang();
-                    updateDaftarBarang();
-                    updateKeranjang(); // Update keranjang jika harga item yang ada di dalamnya berubah
+                    try {
+                        const itemRef = doc(db, `artifacts/${appId}/users/${userId}/items`, item.id);
+                        await updateDoc(itemRef, { harga: newPrice });
+                    } catch (error) {
+                        console.error("Error updating document: ", error);
+                    }
                 } else {
                     alert('Harga baru harus berupa angka dan lebih dari 0.');
                 }
             } else if (deleteBtn) {
                 const index = deleteBtn.dataset.index;
                 const globalIndex = (currentPage - 1) * itemsPerPage + parseInt(index);
+                const item = daftarBarang[globalIndex];
+
                 if (confirm('Apakah Anda yakin ingin menghapus barang ini?')) {
-                    daftarBarang.splice(globalIndex, 1);
-                    simpanDaftarBarang();
-                    updateDaftarBarang();
+                    try {
+                        const itemRef = doc(db, `artifacts/${appId}/users/${userId}/items`, item.id);
+                        await deleteDoc(itemRef);
+                    } catch (error) {
+                        console.error("Error deleting document: ", error);
+                    }
                 }
             }
         });
@@ -329,30 +372,61 @@
             const kembalian = jumlahUang - total;
 
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const doc = new jsPDF({
+                unit: 'mm',
+                format: [58, 150] // Ukuran kertas untuk printer termal mini (lebar 58mm, panjang 150mm)
+            });
             
-            let y = 20;
+            const namaToko = "Kasir Kios";
+            const tanggal = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+            const waktu = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
-            doc.setFontSize(16);
-            doc.text("Struk Pembelian Kios", 105, y, null, null, 'center');
-            y += 10;
-            doc.setFontSize(12);
-            doc.text("-----------------------------------", 105, y, null, null, 'center');
-            y += 10;
+            let y = 5;
+            const marginX = 2;
+            const fontSizeTitle = 8;
+            const fontSizeNormal = 6;
+            const lineHeight = 3.5;
+
+            // Header Struk
+            doc.setFontSize(fontSizeTitle);
+            doc.text(namaToko, doc.internal.pageSize.getWidth() / 2, y, { align: 'center' });
+            y += lineHeight;
+            doc.setFontSize(fontSizeNormal);
+            doc.text(`Tanggal: ${tanggal} ${waktu}`, marginX, y);
+            y += lineHeight * 2;
             
+            // Garis Pemisah
+            doc.line(marginX, y, doc.internal.pageSize.getWidth() - marginX, y);
+            y += lineHeight;
+            
+            // Daftar Barang
             keranjang.forEach(item => {
-                doc.text(`${item.nama}: Rp ${item.harga.toLocaleString('id-ID')}`, 20, y);
-                y += 7;
+                doc.text(item.nama, marginX, y);
+                doc.text(`Rp ${item.harga.toLocaleString('id-ID')}`, doc.internal.pageSize.getWidth() - marginX, y, { align: 'right' });
+                y += lineHeight;
             });
 
-            y += 10;
-            doc.text("-----------------------------------", 105, y, null, null, 'center');
-            y += 10;
-            doc.text(`Total: Rp ${total.toLocaleString('id-ID')}`, 140, y);
-            y += 7;
-            doc.text(`Dibayar: Rp ${jumlahUang.toLocaleString('id-ID')}`, 140, y);
-            y += 7;
-            doc.text(`Kembalian: Rp ${kembalian.toLocaleString('id-ID')}`, 140, y);
+            y += lineHeight;
+            doc.line(marginX, y, doc.internal.pageSize.getWidth() - marginX, y);
+            y += lineHeight;
+            
+            // Ringkasan Pembelian
+            doc.setFontSize(fontSizeNormal);
+            doc.text("Total:", marginX, y);
+            doc.text(`Rp ${total.toLocaleString('id-ID')}`, doc.internal.pageSize.getWidth() - marginX, y, { align: 'right' });
+            y += lineHeight;
+            
+            doc.text("Tunai:", marginX, y);
+            doc.text(`Rp ${jumlahUang.toLocaleString('id-ID')}`, doc.internal.pageSize.getWidth() - marginX, y, { align: 'right' });
+            y += lineHeight;
+            
+            doc.text("Kembalian:", marginX, y);
+            doc.text(`Rp ${kembalian.toLocaleString('id-ID')}`, doc.internal.pageSize.getWidth() - marginX, y, { align: 'right' });
+            y += lineHeight * 2;
+
+            // Footer Struk
+            doc.setFontSize(fontSizeNormal);
+            doc.text("Terima kasih telah berbelanja!", doc.internal.pageSize.getWidth() / 2, y, { align: 'center' });
             
             doc.save("struk_pembelian.pdf");
         });
@@ -360,10 +434,16 @@
         // Menambahkan event listener ke input jumlah uang untuk menghitung kembalian
         jumlahUangInput.addEventListener('input', hitungKembalian);
 
-        // Inisialisasi tampilan awal
-        muatDaftarBarang();
-        updateDaftarBarang();
-        updateKeranjang();
+        // Fungsi utama untuk memulai aplikasi setelah otentikasi
+        function startApp() {
+            const itemsCollection = collection(db, `artifacts/${appId}/users/${userId}/items`);
+            daftarBarangUnsubscribe = onSnapshot(itemsCollection, (snapshot) => {
+                daftarBarang = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateDaftarBarang();
+            });
+            updateKeranjang();
+        }
+
     </script>
 </body>
 </html>
