@@ -84,75 +84,40 @@ body {
   margin-bottom: var(--spacing-sm);
 }
 
-/* Tombol Navigasi Tab */
-.nav-buttons {
-  display: flex;
-  justify-content: flex-start; /* Menempatkan tombol di sebelah kiri */
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-sm);
+.app-subtitle {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
 }
 
-.nav-btn {
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border: 1px solid var(--border-color);
-  background-color: transparent;
-  color: var(--text-primary);
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  font-weight: var(--font-weight-medium);
-  transition: all var(--transition-fast);
-}
-
-.nav-btn:hover {
-  background-color: var(--light-bg);
-}
-
-.nav-btn.active {
-  background-color: var(--primary-color);
-  color: white;
-  border-color: var(--primary-color);
-}
-
-/* Layout Grid Utama */
+/* Layout Grid */
 .main-content {
   display: grid;
   gap: var(--spacing-lg);
 }
 
-/* Layout untuk Tab Kasir */
-.main-grid {
-  display: grid;
-  gap: var(--spacing-lg);
-}
-
 @media (min-width: 768px) {
-  .main-grid {
-    grid-template-columns: 1.5fr 1fr; /* Input/Pembayaran di kiri, Keranjang di kanan */
+  .main-content {
+    grid-template-columns: 1.5fr 1fr;
+    grid-template-areas: 
+      "input-payment cart";
   }
 }
 
 @media (max-width: 767px) {
-  .main-grid {
+  .main-content {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
+    grid-template-areas: 
+      "input-payment"
+      "cart";
   }
 }
 
 .input-payment-section {
-  grid-area: auto;
+  grid-area: input-payment;
 }
 
 .cart-section {
-  grid-area: auto;
-}
-
-/* Tab Content */
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
+  grid-area: cart;
 }
 
 /* Card Component */
@@ -642,110 +607,6 @@ body {
   }
 }
 
-/* Riwayat Section */
-.riwayat-list {
-  min-height: 200px;
-  max-height: 500px;
-  overflow-y: auto;
-  margin-top: var(--spacing-md);
-}
-
-.riwayat-item {
-  padding: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
-  background: var(--light-bg);
-  border-radius: var(--border-radius);
-  border-left: 4px solid var(--primary-color);
-}
-
-.riwayat-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-xs);
-}
-
-.riwayat-date {
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-}
-
-.riwayat-total {
-  font-weight: var(--font-weight-bold);
-  color: var(--primary-color);
-}
-
-.riwayat-items {
-  margin-top: var(--spacing-xs);
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-}
-
-.riwayat-empty {
-  text-align: center;
-  padding: var(--spacing-xl);
-  color: var(--text-secondary);
-  font-style: italic;
-}
-
-/* Filter dan Ringkasan Riwayat */
-.filter-section {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-}
-
-.filter-buttons {
-  display: flex;
-  gap: var(--spacing-xs);
-}
-
-.filter-btn {
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border: 1px solid var(--border-color);
-  background-color: transparent;
-  color: var(--text-primary);
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  font-weight: var(--font-weight-medium);
-  transition: all var(--transition-fast);
-}
-
-.filter-btn:hover {
-  background-color: var(--light-bg);
-}
-
-.filter-btn.active {
-  background-color: var(--primary-color);
-  color: white;
-  border-color: var(--primary-color);
-}
-
-.summary-section {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-lg);
-}
-
-.summary-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.summary-label {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-}
-
-.summary-value {
-  font-weight: var(--font-weight-bold);
-  color: var(--primary-color);
-}
-
 /* Responsive Design */
 @media (max-width: 767px) {
   .container {
@@ -756,20 +617,6 @@ body {
     padding: var(--spacing-md) var(--spacing-sm);
   }
   
-  .nav-buttons {
-    justify-content: center; /* Pusatkan tombol di mobile */
-  }
-
-  .filter-section {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .summary-section {
-    width: 100%;
-    justify-content: space-around;
-  }
-
   .card__body {
     padding: var(--spacing-sm);
   }
@@ -826,24 +673,20 @@ input:focus {
 }
 
 /* Custom Scrollbar */
-.cart-items::-webkit-scrollbar,
-.riwayat-list::-webkit-scrollbar {
+.cart-items::-webkit-scrollbar {
   width: 8px;
 }
 
-.cart-items::-webkit-scrollbar-track,
-.riwayat-list::-webkit-scrollbar-track {
+.cart-items::-webkit-scrollbar-track {
   background: var(--light-bg);
   border-radius: 4px;
 }
 
-.cart-items::-webkit-scrollbar-thumb,
-.riwayat-list::-webkit-scrollbar-thumb {
+.cart-items::-webkit-scrollbar-thumb {
   background: var(--secondary-color);
   border-radius: 4px;
 }
 
-.cart-items::-webkit-scrollbar-thumb:hover,
-.riwayat-list::-webkit-scrollbar-thumb:hover {
+.cart-items::-webkit-scrollbar-thumb:hover {
   background: var(--primary-color);
 }
