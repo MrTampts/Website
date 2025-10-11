@@ -4,8 +4,6 @@ class KasirApp {
         this.cart = [];
         this.totalAmount = 0;
         this.storageKey = 'pos_cart_v2';
-        this.historyStorageKey = 'purchase_history_v1'; // Key baru untuk riwayat
-        this.currentFilter = 'daily'; // Filter default
         this.initializeElements();
         this.bindEvents();
         this.loadCartFromStorage();
@@ -13,9 +11,6 @@ class KasirApp {
         this.updatePaymentDisplay();
         this.updateTheme();
         this.setupServiceWorker();
-        this.setupTabNavigation(); // Inisialisasi tab
-        this.loadHistoryFromStorage(); // Muat riwayat saat aplikasi dimulai
-        this.updateHistoryDisplay(); // Tampilkan riwayat
     }
 
     initializeElements() {
@@ -43,18 +38,6 @@ class KasirApp {
         
         // Currency inputs
         this.currencyInputs = document.querySelectorAll('.currency-input');
-        
-        // Tab elements
-        this.tabKasirBtn = document.getElementById('tabKasirBtn');
-        this.tabRiwayatBtn = document.getElementById('tabRiwayatBtn');
-        this.tabKasir = document.getElementById('tabKasir');
-        this.tabRiwayat = document.getElementById('tabRiwayat');
-        this.riwayatListContainer = document.getElementById('riwayatList');
-        
-        // Filter elements
-        this.filterButtons = document.querySelectorAll('.filter-btn');
-        this.jumlahTransaksiDisplay = document.getElementById('jumlahTransaksi');
-        this.totalPemasukanDisplay = document.getElementById('totalPemasukan');
     }
 
     bindEvents() {
@@ -108,49 +91,6 @@ class KasirApp {
             }
             lastTouchEnd = now;
         }, false);
-    }
-
-    setupTabNavigation() {
-        // Fungsi untuk berpindah antar tab
-        this.tabKasirBtn.addEventListener('click', () => {
-            this.showTab('kasir');
-        });
-
-        this.tabRiwayatBtn.addEventListener('click', () => {
-            this.showTab('riwayat');
-        });
-        
-        // Setup filter buttons
-        this.filterButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                const filter = e.target.dataset.filter;
-                if (filter) {
-                    this.currentFilter = filter;
-                    // Update active button
-                    this.filterButtons.forEach(btn => btn.classList.remove('active'));
-                    e.target.classList.add('active');
-                    this.updateHistoryDisplay(); // Refresh tampilan riwayat
-                }
-            });
-        });
-    }
-
-    showTab(tabName) {
-        // Sembunyikan semua tab
-        this.tabKasir.classList.remove('active');
-        this.tabRiwayat.classList.remove('active');
-        // Hapus kelas active dari tombol
-        this.tabKasirBtn.classList.remove('active');
-        this.tabRiwayatBtn.classList.remove('active');
-
-        if (tabName === 'kasir') {
-            this.tabKasir.classList.add('active');
-            this.tabKasirBtn.classList.add('active');
-        } else if (tabName === 'riwayat') {
-            this.tabRiwayat.classList.add('active');
-            this.tabRiwayatBtn.classList.add('active');
-            this.updateHistoryDisplay(); // Refresh tampilan riwayat saat tab dibuka
-        }
     }
 
     formatCurrencyInput(input) {
@@ -475,16 +415,6 @@ class KasirApp {
             return;
         }
         
-        // Ambil data transaksi sebelum reset
-        const transactionData = {
-            id: Date.now(), // ID unik untuk transaksi
-            timestamp: new Date().toISOString(),
-            items: [...this.cart], // Salin array item
-            total: this.totalAmount,
-            received: received,
-            change: received - this.totalAmount
-        };
-        
         // Add loading state
         this.printReceiptBtn.classList.add('loading');
         this.printReceiptBtn.disabled = true;
@@ -599,9 +529,6 @@ class KasirApp {
                 
                 this.showSuccess('Struk berhasil dicetak!');
                 
-                // Simpan transaksi ke riwayat
-                this.addToHistory(transactionData);
-                
                 // Reset button state
                 this.printReceiptBtn.classList.remove('loading');
                 this.printReceiptBtn.innerHTML = '<span class="btn-icon">✅</span>Struk berhasil!';
@@ -629,97 +556,6 @@ class KasirApp {
                 alert('Gagal membuat struk. Periksa koneksi internet dan muat ulang halaman jika perlu.');
             }
         }, 500);
-    }
-
-    // Fungsi baru untuk menambahkan transaksi ke riwayat
-    addToHistory(transaction) {
-        let history = this.getHistoryFromStorage();
-        history.unshift(transaction); // Tambahkan ke awal array
-        this.saveHistoryToStorage(history);
-        this.updateHistoryDisplay(); // Perbarui tampilan riwayat
-    }
-
-    // Fungsi untuk menyimpan riwayat ke localStorage
-    saveHistoryToStorage(historyArray) {
-        try {
-            localStorage.setItem(this.historyStorageKey, JSON.stringify(historyArray));
-        } catch (error) {
-            console.warn('Could not save history to storage:', error);
-        }
-    }
-
-    // Fungsi untuk mengambil riwayat dari localStorage
-    getHistoryFromStorage() {
-        try {
-            const stored = localStorage.getItem(this.historyStorageKey);
-            if (stored) {
-                return JSON.parse(stored);
-            }
-        } catch (error) {
-            console.warn('Could not load history from storage:', error);
-        }
-        return [];
-    }
-
-    // Fungsi untuk memuat riwayat dari localStorage ke aplikasi
-    loadHistoryFromStorage() {
-        this.history = this.getHistoryFromStorage();
-    }
-
-    // Fungsi untuk memperbarui tampilan riwayat
-    updateHistoryDisplay() {
-        // Filter riwayat berdasarkan tanggal
-        const filteredHistory = this.filterHistoryByDate(this.history, this.currentFilter);
-        
-        // Hitung jumlah transaksi dan total pemasukan
-        const jumlahTransaksi = filteredHistory.length;
-        const totalPemasukan = filteredHistory.reduce((sum, transaction) => sum + transaction.total, 0);
-        
-        // Update tampilan jumlah dan pemasukan
-        this.jumlahTransaksiDisplay.textContent = jumlahTransaksi;
-        this.totalPemasukanDisplay.textContent = this.formatCurrency(totalPemasukan);
-        
-        // Update daftar riwayat
-        if (filteredHistory.length === 0) {
-            this.riwayatListContainer.innerHTML = `<p class="riwayat-empty">Tidak ada riwayat pembelian untuk periode ini.</p>`;
-            return;
-        }
-
-        this.riwayatListContainer.innerHTML = filteredHistory.map(transaction => `
-            <div class="riwayat-item">
-                <div class="riwayat-header">
-                    <div class="riwayat-date">${new Date(transaction.timestamp).toLocaleString('id-ID')}</div>
-                    <div class="riwayat-total">${this.formatCurrency(transaction.total)}</div>
-                </div>
-                <div class="riwayat-items">
-                    ${transaction.items.map(item => `${item.quantity}x ${this.escapeHtml(item.name)}`).join(', ')}
-                </div>
-            </div>
-        `).join('');
-    }
-    
-    // Fungsi untuk memfilter riwayat berdasarkan tanggal
-    filterHistoryByDate(history, filterType) {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const oneWeekAgo = new Date(today);
-        oneWeekAgo.setDate(today.getDate() - 7);
-        const oneMonthAgo = new Date(today);
-        oneMonthAgo.setMonth(today.getMonth() - 1);
-
-        return history.filter(transaction => {
-            const transactionDate = new Date(transaction.timestamp);
-            switch(filterType) {
-                case 'daily':
-                    return transactionDate >= today;
-                case 'weekly':
-                    return transactionDate >= oneWeekAgo;
-                case 'monthly':
-                    return transactionDate >= oneMonthAgo;
-                default:
-                    return true;
-            }
-        });
     }
 
     formatCurrency(amount) {
