@@ -6,119 +6,170 @@
     <title>Kasir Modern - POS Digital</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        // Periksa dukungan jsPDF
+        window.jsPDF = window.jspdf.jsPDF;
+    </script>
 </head>
 <body>
     <div class="safe-area">
         <div class="container">
             <header class="app-header">
                 <h1>Kasir Modern</h1>
-                <p class="app-subtitle">Sistem POS Digital Terpadu</p>
+                <!-- Tombol navigasi ditempatkan di sini -->
+                <div class="nav-buttons">
+                    <button id="tabKasirBtn" class="nav-btn active">Kasir</button>
+                    <button id="tabRiwayatBtn" class="nav-btn">Riwayat</button>
+                </div>
             </header>
 
             <main class="main-content">
-                <!-- Input Section -->
-                <section class="card input-section">
-                    <div class="card__header">
-                        <h2>Tambah Barang</h2>
-                    </div>
-                    <div class="card__body">
-                        <div class="form-group">
-                            <label for="itemName" class="form-label">Nama Barang</label>
-                            <input 
-                                type="text" 
-                                id="itemName" 
-                                class="form-control touch-target" 
-                                placeholder="Masukkan nama barang..."
-                                autocomplete="off"
-                            >
-                        </div>
-                        <div class="form-group">
-                            <label for="itemPrice" class="form-label">Harga Barang</label>
-                            <div class="currency-input-wrapper">
-                                <span class="currency-prefix">Rp</span>
-                                <input 
-                                    type="text" 
-                                    id="itemPrice" 
-                                    class="form-control touch-target currency-input" 
-                                    placeholder="0" 
-                                    inputmode="numeric"
-                                    autocomplete="off"
-                                >
+                <!-- Tab Konten Kasir -->
+                <div id="tabKasir" class="tab-content active">
+                    <div class="main-grid">
+                        <!-- Input & Payment Section -->
+                        <section class="card input-payment-section">
+                            <div class="card__header">
+                                <h2>Tambah Barang & Pembayaran</h2>
                             </div>
-                        </div>
-                        <button id="addItemBtn" class="btn btn--primary btn--full-width touch-target">
-                            <span class="btn-icon">+</span>
-                            Tambah Barang
-                        </button>
-                    </div>
-                </section>
+                            <div class="card__body">
+                                <!-- Input Section -->
+                                <div class="form-group">
+                                    <label for="itemName" class="form-label">Nama Barang</label>
+                                    <input 
+                                        type="text" 
+                                        id="itemName" 
+                                        class="form-control touch-target" 
+                                        placeholder="Masukkan nama barang..."
+                                        autocomplete="off"
+                                    >
+                                    <div class="error-message" id="itemNameError" style="display:none;"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="itemPrice" class="form-label">Harga Barang</label>
+                                    <div class="currency-input-wrapper">
+                                        <span class="currency-prefix">Rp</span>
+                                        <input 
+                                            type="text" 
+                                            id="itemPrice" 
+                                            class="form-control touch-target currency-input" 
+                                            placeholder="0" 
+                                            inputmode="numeric"
+                                            autocomplete="off"
+                                        >
+                                    </div>
+                                    <div class="error-message" id="itemPriceError" style="display:none;"></div>
+                                </div>
+                                <button id="addItemBtn" class="btn btn--primary btn--full-width touch-target" disabled>
+                                    <span class="btn-icon">+</span>
+                                    Tambah Barang
+                                </button>
 
-                <!-- Cart Section -->
-                <section class="card cart-section">
-                    <div class="card__header cart-header">
-                        <h2>Keranjang Belanja</h2>
-                        <button id="clearCartBtn" class="btn btn--outline btn--sm touch-target clear-btn">
-                            <span class="btn-icon">🗑️</span>
-                            Kosongkan
-                        </button>
-                    </div>
-                    <div class="card__body">
-                        <div id="cartItems" class="cart-items">
-                            <div class="empty-cart">
-                                <div class="empty-cart-icon">🛒</div>
-                                <p>Keranjang masih kosong</p>
-                                <p class="empty-cart-subtitle">Tambahkan barang untuk mulai transaksi</p>
-                            </div>
-                        </div>
-                        <div class="cart-summary">
-                            <div class="cart-total">
-                                <div class="total-row">
-                                    <span class="total-label">Total Belanja</span>
-                                    <span id="totalAmount" class="total-amount">Rp 0</span>
+                                <!-- Payment Section -->
+                                <div class="payment-section-in-card">
+                                    <h3 class="section-title">Pembayaran</h3>
+                                    <div class="form-group">
+                                        <label for="moneyReceived" class="form-label">Uang Diterima</label>
+                                        <div class="currency-input-wrapper">
+                                            <span class="currency-prefix">Rp</span>
+                                            <input 
+                                                type="text" 
+                                                id="moneyReceived" 
+                                                class="form-control touch-target currency-input" 
+                                                placeholder="0" 
+                                                inputmode="numeric"
+                                                autocomplete="off"
+                                            >
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="change-display">
+                                        <div class="change-row">
+                                            <span class="change-label">Uang Kembalian</span>
+                                            <span id="changeAmount" class="change-amount">Rp 0</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="payment-actions">
+                                        <button id="printReceiptBtn" class="btn btn--primary btn--full-width touch-target" disabled>
+                                            <span class="btn-icon">📄</span>
+                                            Cetak Struk
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </section>
+                        </section>
 
-                <!-- Payment Section -->
-                <section class="card payment-section">
-                    <div class="card__header">
-                        <h2>Pembayaran</h2>
+                        <!-- Cart Section -->
+                        <section class="card cart-section">
+                            <div class="card__header cart-header">
+                                <h2>Keranjang Belanja</h2>
+                                <button id="clearCartBtn" class="btn btn--outline btn--sm touch-target clear-btn">
+                                    <span class="btn-icon">🗑️</span>
+                                    Kosongkan
+                                </button>
+                            </div>
+                            <div class="card__body">
+                                <div id="cartItems" class="cart-items">
+                                    <div class="empty-cart">
+                                        <div class="empty-cart-icon">🛒</div>
+                                        <p>Keranjang masih kosong</p>
+                                        <p class="empty-cart-subtitle">Tambahkan barang untuk mulai transaksi</p>
+                                    </div>
+                                </div>
+                                <div class="cart-summary">
+                                    <div class="cart-total">
+                                        <div class="total-row">
+                                            <span class="total-label">Total Belanja</span>
+                                            <span id="totalAmount" class="total-amount">Rp 0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
-                    <div class="card__body">
-                        <div class="form-group">
-                            <label for="moneyReceived" class="form-label">Uang Diterima</label>
-                            <div class="currency-input-wrapper">
-                                <span class="currency-prefix">Rp</span>
-                                <input 
-                                    type="text" 
-                                    id="moneyReceived" 
-                                    class="form-control touch-target currency-input" 
-                                    placeholder="0" 
-                                    inputmode="numeric"
-                                    autocomplete="off"
-                                >
+                </div>
+
+                <!-- Tab Konten Riwayat -->
+                <div id="tabRiwayat" class="tab-content">
+                    <section class="card">
+                        <div class="card__header">
+                            <h2>Riwayat Pembelian</h2>
+                        </div>
+                        <div class="card__body">
+                            <!-- Filter Tanggal -->
+                            <div class="filter-section">
+                                <div class="filter-buttons">
+                                    <button class="filter-btn active" data-filter="daily">Harian</button>
+                                    <button class="filter-btn" data-filter="weekly">Mingguan</button>
+                                    <button class="filter-btn" data-filter="monthly">Bulanan</button>
+                                </div>
+                                <div class="summary-section">
+                                    <div class="summary-item">
+                                        <span class="summary-label">Jumlah Transaksi:</span>
+                                        <span id="jumlahTransaksi" class="summary-value">0</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="summary-label">Total Pemasukan:</span>
+                                        <span id="totalPemasukan" class="summary-value">Rp 0</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Daftar Riwayat -->
+                            <div id="riwayatList" class="riwayat-list">
+                                <!-- Riwayat akan ditampilkan di sini oleh JS -->
+                                <p class="riwayat-empty">Belum ada riwayat pembelian.</p>
                             </div>
                         </div>
-                        
-                        <div class="change-display">
-                            <div class="change-row">
-                                <span class="change-label">Uang Kembalian</span>
-                                <span id="changeAmount" class="change-amount">Rp 0</span>
-                            </div>
-                        </div>
-                        
-                        <div class="payment-actions">
-                            <button id="printReceiptBtn" class="btn btn--primary btn--full-width touch-target" disabled>
-                                <span class="btn-icon">📄</span>
-                                Cetak Struk
-                            </button>
-                        </div>
-                    </div>
-                </section>
+                    </section>
+                </div>
             </main>
         </div>
+    </div>
+
+    <!-- Success Notification -->
+    <div class="success-notification" id="successNotification" style="display:none;">
+        <span id="successMessage">Item berhasil ditambahkan!</span>
     </div>
 
     <script src="app.js"></script>
