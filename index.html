@@ -15,7 +15,14 @@
     <div class="safe-area">
         <div class="container">
             <header class="app-header">
-                <h1>Kasir Modern</h1>
+                <div class="header-top">
+                    <h1>Kasir Modern</h1>
+                    <div class="header-actions">
+                        <input type="search" id="searchItem" placeholder="Cari barang... (tekan Enter untuk kelola)" class="form-control touch-target" autocomplete="off">
+                        <button id="openManageBtn" class="btn btn--outline touch-target">Kelola Barang</button>
+                        <button id="openEarningsBtn" class="btn btn--outline touch-target">Pendapatan</button>
+                    </div>
+                </div>
                 <p class="app-subtitle">Sistem POS Digital Terpadu</p>
             </header>
 
@@ -39,7 +46,7 @@
                             <div class="error-message" id="itemNameError" style="display:none;"></div>
                         </div>
                         <div class="form-group">
-                            <label for="itemPrice" class="form-label">Harga Barang</label>
+                            <label for="itemPrice" class="form-label">Harga Barang (Jual)</label>
                             <div class="currency-input-wrapper">
                                 <span class="currency-prefix">Rp</span>
                                 <input 
@@ -127,6 +134,94 @@
     <!-- Success Notification -->
     <div class="success-notification" id="successNotification" style="display:none;">
         <span id="successMessage">Item berhasil ditambahkan!</span>
+    </div>
+
+    <!-- Manage Items Modal -->
+    <div class="modal" id="manageItemsModal" aria-hidden="true">
+      <div class="modal-dialog">
+        <header class="modal-header">
+          <h3>Kelola Barang</h3>
+          <button class="modal-close" id="closeManageBtn">✖</button>
+        </header>
+        <div class="modal-body">
+          <form id="manageItemForm">
+            <div class="form-group">
+              <label for="manageName">Nama Barang</label>
+              <input id="manageName" class="form-control" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="managePurchase">Harga Beli</label>
+              <div class="currency-input-wrapper">
+                <span class="currency-prefix">Rp</span>
+                <input id="managePurchase" class="form-control currency-input" inputmode="numeric">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="manageSell">Harga Jual</label>
+              <div class="currency-input-wrapper">
+                <span class="currency-prefix">Rp</span>
+                <input id="manageSell" class="form-control currency-input" inputmode="numeric">
+              </div>
+            </div>
+            <input type="hidden" id="manageId">
+            <div class="modal-actions">
+              <button type="submit" id="saveManageBtn" class="btn btn--primary">Simpan</button>
+              <button type="button" id="newManageBtn" class="btn btn--outline">Baru</button>
+            </div>
+          </form>
+
+          <div class="items-list">
+            <h4>Daftar Barang</h4>
+            <table id="itemsTable" class="items-table">
+              <thead>
+                <tr><th>Nama</th><th>Beli</th><th>Jual</th><th>Aksi</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Earnings Modal -->
+    <div class="modal" id="earningsModal" aria-hidden="true">
+      <div class="modal-dialog">
+        <header class="modal-header">
+          <h3>Pendapatan</h3>
+          <button class="modal-close" id="closeEarningsBtn">✖</button>
+        </header>
+        <div class="modal-body">
+          <div class="earnings-summary">
+            <div class="earn-row">
+              <span>Mingguan</span>
+              <strong id="weeklyTotal">Rp 0</strong>
+            </div>
+            <div class="earn-row">
+              <span>Bulanan</span>
+              <strong id="monthlyTotal">Rp 0</strong>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="manualIncomeAmount">Catat Pemasukan Manual</label>
+            <div class="currency-input-wrapper">
+              <span class="currency-prefix">Rp</span>
+              <input id="manualIncomeAmount" class="form-control currency-input" inputmode="numeric">
+            </div>
+            <div class="modal-actions">
+              <button id="addIncomeBtn" class="btn btn--primary">Tambah Pemasukan</button>
+            </div>
+          </div>
+
+          <div class="income-list">
+            <h4>Riwayat Pemasukan</h4>
+            <table id="incomeTable" class="items-table">
+              <thead><tr><th>Tanggal</th><th>Jumlah</th><th>Sumber</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="app.js"></script>
