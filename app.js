@@ -4,11 +4,23 @@ class KasirApp {
         this.cart = [];
         this.totalAmount = 0;
         this.storageKey = 'pos_cart_v2';
+
+        // Items management & earnings storage keys
+        this.itemsStorageKey = 'pos_items_v1';
+        this.earningsStorageKey = 'pos_earnings_v1';
+
+        // Data holders
+        this.items = [];
+        this.earnings = [];
+
         this.initializeElements();
         this.bindEvents();
         this.loadCartFromStorage();
+        this.loadItemsFromStorage();
+        this.loadEarningsFromStorage();
         this.updateCartDisplay();
         this.updatePaymentDisplay();
+        this.updateEarningsDisplay();
         this.updateTheme();
         this.setupServiceWorker();
     }
@@ -35,7 +47,32 @@ class KasirApp {
         
         // Notification element
         this.successNotification = document.getElementById('successNotification');
-        
+
+        // Header search & modal open buttons
+        this.searchInput = document.getElementById('searchItem');
+        this.openManageBtn = document.getElementById('openManageBtn');
+        this.openEarningsBtn = document.getElementById('openEarningsBtn');
+
+        // Modal elements - Manage Items
+        this.manageModal = document.getElementById('manageItemsModal');
+        this.closeManageBtn = document.getElementById('closeManageBtn');
+        this.manageItemForm = document.getElementById('manageItemForm');
+        this.manageName = document.getElementById('manageName');
+        this.managePurchase = document.getElementById('managePurchase');
+        this.manageSell = document.getElementById('manageSell');
+        this.manageId = document.getElementById('manageId');
+        this.newManageBtn = document.getElementById('newManageBtn');
+        this.itemsTableBody = document.querySelector('#itemsTable tbody');
+
+        // Modal elements - Earnings
+        this.earningsModal = document.getElementById('earningsModal');
+        this.closeEarningsBtn = document.getElementById('closeEarningsBtn');
+        this.weeklyTotalEl = document.getElementById('weeklyTotal');
+        this.monthlyTotalEl = document.getElementById('monthlyTotal');
+        this.manualIncomeAmount = document.getElementById('manualIncomeAmount');
+        this.addIncomeBtn = document.getElementById('addIncomeBtn');
+        this.incomeTableBody = document.querySelector('#incomeTable tbody');
+
         // Currency inputs
         this.currencyInputs = document.querySelectorAll('.currency-input');
     }
@@ -71,7 +108,52 @@ class KasirApp {
         this.moneyReceivedInput.addEventListener('input', () => {
             this.updatePaymentDisplay();
         });
-        
+
+        // Search input: Enter opens Manage modal and tries to highlight item
+        this.searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.openManageModal();
+                // prefill search by name
+                const q = this.searchInput.value.trim().toLowerCase();
+                if (q) {
+                    // open modal and highlight matching row
+                    setTimeout(() => {
+                        const rows = Array.from(this.itemsTableBody.querySelectorAll('tr'));
+                        rows.forEach(r => r.classList.remove('highlight'));
+                        const found = rows.find(r => r.dataset.name && r.dataset.name.toLowerCase().includes(q));
+                        if (found) {
+                            found.classList.add('highlight');
+                            found.scrollIntoView({ block: 'center' });
+                        }
+                    }, 120);
+                }
+            }
+        });
+
+        // Header open modal buttons
+        this.openManageBtn.addEventListener('click', () => this.openManageModal());
+        this.openEarningsBtn.addEventListener('click', () => this.openEarningsModal());
+
+        // Modal close
+        this.closeManageBtn.addEventListener('click', () => this.closeManageModal());
+        this.closeEarningsBtn.addEventListener('click', () => this.closeEarningsModal());
+
+        // Manage form submit
+        this.manageItemForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveManageItem();
+        });
+
+        // New manage button
+        this.newManageBtn.addEventListener('click', () => this.clearManageForm());
+
+        // Add manual income
+        this.addIncomeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.addManualIncome();
+        });
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
         
@@ -79,6 +161,8 @@ class KasirApp {
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
                 this.saveCartToStorage();
+                this.saveItemsToStorage();
+                this.saveEarningsToStorage();
             }
         });
         
@@ -93,6 +177,9 @@ class KasirApp {
         }, false);
     }
 
+    /* ---------------------------
+       Currency and Input Helpers
+       --------------------------- */
     formatCurrencyInput(input) {
         let value = input.value.replace(/[^\d]/g, '');
         if (value.length > 12) value = value.slice(0, 12);
@@ -186,17 +273,22 @@ class KasirApp {
 
     showError(field, message) {
         const errorElement = this[`${field}Error`];
+        if (!errorElement) return;
         errorElement.textContent = message;
         errorElement.style.display = 'block';
-        this[`${field}Input`].classList.add('error');
+        this[`${field}Input`]?.classList.add('error');
     }
 
     clearError(field) {
         const errorElement = this[`${field}Error`];
+        if (!errorElement) return;
         errorElement.style.display = 'none';
-        this[`${field}Input`].classList.remove('error');
+        this[`${field}Input`]?.classList.remove('error');
     }
 
+    /* ---------------------------
+       Cart operations (existing)
+       --------------------------- */
     addItem() {
         if (!this.validateInputs()) return;
         
@@ -414,6 +506,9 @@ class KasirApp {
             this.showError('moneyReceived', `Uang kurang ${shortage}`);
             return;
         }
+
+        // Store sale amount for earnings before potential clear
+        const saleAmount = this.totalAmount;
         
         // Add loading state
         this.printReceiptBtn.classList.add('loading');
@@ -539,6 +634,11 @@ class KasirApp {
                     
                     const newTransaction = confirm('Transaksi berhasil! Mulai transaksi baru?');
                     if (newTransaction) {
+                        // Record earning from sale
+                        if (saleAmount > 0) {
+                            this.recordSaleEarning(saleAmount);
+                        }
+
                         this.cart = [];
                         this.moneyReceivedInput.value = '';
                         this.updateCartDisplay();
@@ -566,8 +666,8 @@ class KasirApp {
     escapeHtml(text) {
         const map = {
             '&': '&amp;',
-            '<': '<',
-            '>': '>',
+            '<': '&lt;',
+            '>': '&gt;',
             '"': '&quot;',
             "'": '&#039;'
         };
@@ -635,6 +735,278 @@ class KasirApp {
                     });
             });
         }
+    }
+
+    /* ---------------------------
+       Items management
+       --------------------------- */
+    loadItemsFromStorage() {
+        try {
+            const raw = localStorage.getItem(this.itemsStorageKey);
+            if (raw) {
+                const data = JSON.parse(raw);
+                if (Array.isArray(data)) {
+                    this.items = data;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load items:', e);
+        }
+        this.renderItemsTable();
+    }
+
+    saveItemsToStorage() {
+        try {
+            localStorage.setItem(this.itemsStorageKey, JSON.stringify(this.items));
+        } catch (e) {
+            console.warn('Could not save items:', e);
+        }
+    }
+
+    renderItemsTable() {
+        if (!this.itemsTableBody) return;
+        this.itemsTableBody.innerHTML = '';
+        this.items.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.dataset.id = item.id;
+            tr.dataset.name = item.name;
+            tr.innerHTML = `
+                <td class="td-name">${this.escapeHtml(item.name)}</td>
+                <td class="td-buy">${this.formatCurrency(item.purchase || 0)}</td>
+                <td class="td-sell">${this.formatCurrency(item.sell || 0)}</td>
+                <td class="td-actions">
+                    <button class="btn btn--sm btn-select" data-id="${item.id}">Pilih</button>
+                    <button class="btn btn--sm btn-edit" data-id="${item.id}">Edit</button>
+                    <button class="btn btn--sm btn-delete" data-id="${item.id}">Hapus</button>
+                </td>
+            `;
+            this.itemsTableBody.appendChild(tr);
+        });
+
+        // attach buttons
+        this.itemsTableBody.querySelectorAll('.btn-select').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                this.selectItemToInput(id);
+            });
+        });
+        this.itemsTableBody.querySelectorAll('.btn-edit').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                this.editItem(id);
+            });
+        });
+        this.itemsTableBody.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                this.deleteItem(id);
+            });
+        });
+    }
+
+    openManageModal() {
+        if (!this.manageModal) return;
+        this.manageModal.classList.add('open');
+        this.manageModal.setAttribute('aria-hidden', 'false');
+        this.renderItemsTable();
+    }
+
+    closeManageModal() {
+        if (!this.manageModal) return;
+        this.manageModal.classList.remove('open');
+        this.manageModal.setAttribute('aria-hidden', 'true');
+        this.clearManageForm();
+    }
+
+    clearManageForm() {
+        this.manageName.value = '';
+        this.managePurchase.value = '';
+        this.manageSell.value = '';
+        this.manageId.value = '';
+    }
+
+    saveManageItem() {
+        const name = this.manageName.value.trim();
+        const purchaseStr = this.managePurchase.value.replace(/[^\d]/g, '');
+        const sellStr = this.manageSell.value.replace(/[^\d]/g, '');
+        const purchase = parseInt(purchaseStr) || 0;
+        const sell = parseInt(sellStr) || 0;
+
+        if (!name) {
+            alert('Nama barang wajib diisi');
+            return;
+        }
+        if (sell <= 0) {
+            alert('Harga jual harus lebih dari 0');
+            return;
+        }
+
+        const id = this.manageId.value;
+        if (id) {
+            // update
+            const idx = this.items.findIndex(i => i.id.toString() === id.toString());
+            if (idx >= 0) {
+                this.items[idx].name = name;
+                this.items[idx].purchase = purchase;
+                this.items[idx].sell = sell;
+                this.showSuccess('Barang diperbarui');
+            }
+        } else {
+            // new
+            this.items.push({
+                id: Date.now() + Math.random(),
+                name,
+                purchase,
+                sell
+            });
+            this.showSuccess('Barang ditambahkan');
+        }
+
+        this.saveItemsToStorage();
+        this.renderItemsTable();
+        this.clearManageForm();
+    }
+
+    editItem(id) {
+        const item = this.items.find(i => i.id.toString() === id.toString());
+        if (!item) return;
+        this.manageId.value = item.id;
+        this.manageName.value = item.name;
+        this.managePurchase.value = item.purchase ? item.purchase.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+        this.manageSell.value = item.sell ? item.sell.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+        // ensure modal open
+        this.openManageModal();
+    }
+
+    deleteItem(id) {
+        const item = this.items.find(i => i.id.toString() === id.toString());
+        if (!item) return;
+        if (confirm(`Hapus barang "${item.name}"?`)) {
+            this.items = this.items.filter(i => i.id.toString() !== id.toString());
+            this.saveItemsToStorage();
+            this.renderItemsTable();
+            this.showSuccess('Barang dihapus');
+        }
+    }
+
+    selectItemToInput(id) {
+        const item = this.items.find(i => i.id.toString() === id.toString());
+        if (!item) return;
+        this.itemNameInput.value = item.name;
+        this.itemPriceInput.value = item.sell ? item.sell.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+        this.closeManageModal();
+        this.itemNameInput.focus();
+        this.validateInputs();
+    }
+
+    /* ---------------------------
+       Earnings management
+       --------------------------- */
+    loadEarningsFromStorage() {
+        try {
+            const raw = localStorage.getItem(this.earningsStorageKey);
+            if (raw) {
+                const data = JSON.parse(raw);
+                if (Array.isArray(data)) {
+                    this.earnings = data;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load earnings:', e);
+        }
+        this.renderIncomeTable();
+        this.updateEarningsDisplay();
+    }
+
+    saveEarningsToStorage() {
+        try {
+            localStorage.setItem(this.earningsStorageKey, JSON.stringify(this.earnings));
+        } catch (e) {
+            console.warn('Could not save earnings:', e);
+        }
+    }
+
+    addManualIncome() {
+        const amountStr = this.manualIncomeAmount.value.replace(/[^\d]/g, '');
+        const amount = parseInt(amountStr) || 0;
+        if (amount <= 0) {
+            alert('Masukkan jumlah pemasukan yang valid');
+            return;
+        }
+        const entry = {
+            id: Date.now() + Math.random(),
+            amount,
+            date: new Date().toISOString(),
+            source: 'Manual'
+        };
+        this.earnings.unshift(entry);
+        this.saveEarningsToStorage();
+        this.renderIncomeTable();
+        this.updateEarningsDisplay();
+        this.manualIncomeAmount.value = '';
+        this.showSuccess('Pemasukan dicatat');
+    }
+
+    recordSaleEarning(amount) {
+        if (!amount || amount <= 0) return;
+        const entry = {
+            id: Date.now() + Math.random(),
+            amount,
+            date: new Date().toISOString(),
+            source: 'Penjualan'
+        };
+        this.earnings.unshift(entry);
+        this.saveEarningsToStorage();
+        this.renderIncomeTable();
+        this.updateEarningsDisplay();
+    }
+
+    renderIncomeTable() {
+        if (!this.incomeTableBody) return;
+        this.incomeTableBody.innerHTML = '';
+        this.earnings.forEach(e => {
+            const tr = document.createElement('tr');
+            const date = new Date(e.date);
+            tr.innerHTML = `
+                <td>${date.toLocaleString('id-ID')}</td>
+                <td>${this.formatCurrency(e.amount)}</td>
+                <td>${this.escapeHtml(e.source || '')}</td>
+            `;
+            this.incomeTableBody.appendChild(tr);
+        });
+    }
+
+    updateEarningsDisplay() {
+        // weekly: last 7 days inclusive
+        const now = new Date();
+        const weekAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        const weekly = this.earnings.reduce((sum, e) => {
+            const d = new Date(e.date);
+            return d >= weekAgo ? sum + (e.amount || 0) : sum;
+        }, 0);
+
+        // monthly: same month & year
+        const monthly = this.earnings.reduce((sum, e) => {
+            const d = new Date(e.date);
+            return (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) ? sum + (e.amount || 0) : sum;
+        }, 0);
+
+        if (this.weeklyTotalEl) this.weeklyTotalEl.textContent = this.formatCurrency(weekly);
+        if (this.monthlyTotalEl) this.monthlyTotalEl.textContent = this.formatCurrency(monthly);
+    }
+
+    openEarningsModal() {
+        if (!this.earningsModal) return;
+        this.earningsModal.classList.add('open');
+        this.earningsModal.setAttribute('aria-hidden', 'false');
+        this.renderIncomeTable();
+        this.updateEarningsDisplay();
+    }
+
+    closeEarningsModal() {
+        if (!this.earningsModal) return;
+        this.earningsModal.classList.remove('open');
+        this.earningsModal.setAttribute('aria-hidden', 'true');
     }
 }
 
